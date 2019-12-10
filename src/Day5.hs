@@ -22,9 +22,15 @@ run pos program inputs
   | opcode == 3 = cont (writeOutput (head inputs)) (tail inputs)
   | opcode == 4 = let (p, o) = (cont program inputs)
                   in (p, (head inputParamaters) : o)
+  | opcode == 5 = if ((head inputParamaters) /= 0) then (run (inputParamaters !! 1) program inputs) else cont program inputs
+  | opcode == 6 = if ((head inputParamaters) == 0) then (run (inputParamaters !! 1) program inputs) else cont program inputs
+  | opcode == 7 = let isLess = if (inputParamaters !! 0) < (inputParamaters !! 1) then 1 else 0
+                  in cont (writeOutput isLess) inputs
+  | opcode == 8 = let isEqual = if (inputParamaters !! 0) == (inputParamaters !! 1) then 1 else 0
+                  in cont (writeOutput isEqual) inputs
   where (opcode, inputPI, outputP) = parseOperation (program !! pos)
         outputPos = program !! (pos + (length inputPI) + 1)
-        writeOutput x = writeResult x outputPos program
+        writeOutput x = changeProgram x outputPos program
         totalNrParams = (length inputPI) + outputP
         inputParamaters = readInputParameters inputPI (pos + 1) program
         cont prog is = run (pos + totalNrParams + 1) prog is
@@ -38,12 +44,20 @@ parseOperation i = (opcode, (take amountOfInputParameters (parseParameterModes (
           | opcode == 2 = 2
           | opcode == 3 = 0
           | opcode == 4 = 1
+          | opcode == 5 = 2
+          | opcode == 6 = 2
+          | opcode == 7 = 2
+          | opcode == 8 = 2
           | opcode == 99 = 0
         amountOfOutputParameters
           | opcode == 1 = 1
           | opcode == 2 = 1
           | opcode == 3 = 1
           | opcode == 4 = 0
+          | opcode == 5 = 0
+          | opcode == 6 = 0
+          | opcode == 7 = 1
+          | opcode == 8 = 1
           | opcode == 99 = 0
         opcode = (mod i 100)
 
@@ -51,15 +65,14 @@ readInputParameters :: ParametersImmediate -> Position -> Program -> [Value]
 readInputParameters [] _ _ = []
 readInputParameters (True : xs) pos prog = (prog !! pos) : (readInputParameters xs (pos + 1) prog)
 readInputParameters (False : xs) pos prog = (prog !! (prog !! pos)) : (readInputParameters xs (pos + 1) prog)
---  let readParam 
---    | x == True = (prog !! pos)
----   | x == False = (prog !! (prog !! pos))
---  in readParam : (readInputParameters xs (pos + 1) prog)
 
-writeResult :: Value -> Position -> Program -> Program
-writeResult v 0 (_ : tail) = v : tail
-writeResult v p (h : tail) = h : (writeResult v (p - 1) tail)
+changeProgram :: Value -> Position -> Program -> Program
+changeProgram v 0 (_ : tail) = v : tail
+changeProgram v p (h : tail) = h : (changeProgram v (p - 1) tail)
 
 runProgram1 = fullRun program1 [1]
 answer1 = last (snd runProgram1)
+
+runProgram2 = fullRun program1 [5]
+answer2 = last (snd runProgram2)
 
