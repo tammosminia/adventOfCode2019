@@ -15,10 +15,41 @@ amplify program phaseSettings = amp phaseSettings 0
 power1 = map (amplify ampProgram1) (permutations [0..4])
 answer1 = maximum power1
 
---amplify2 :: Program -> [Value] -> Value
---amplify2 program phaseSettings = amp phaseSettings 0
---  where
---    amp [] v = v
---    amp (a : as) v = amp as (runAmp a v)
---    runAmp a v = head $ snd $ fullRun program [a, v] 
+type RunningProgram = (Position, Program, [Input])
 
+amplify2 :: Program -> [Value] -> [Output]
+amplify2 program phaseSettings = amp initAmps 0
+  where
+    initAmps :: [RunningProgram]
+    initAmps = map (initAmplifier program) phaseSettings 
+    amp :: [RunningProgram] -> Value -> [Output]
+    amp amps v
+      | null out = []
+      | otherwise = outv : amp namps outv
+      where (namps, out) = oneLoop amps v
+            [outv] = out
+    oneLoop amps v = foldl oneLoopF ([], [v]) amps
+    oneLoopF (amps, []) amp = (amps, [])
+    oneLoopF (amps, [v]) amp = (amps ++ [namp], out)
+      where (namp, out) = stepToOutput $ feedInput amp v
+    
+amplify2max :: Program -> [Value] -> Output
+amplify2max program phaseSettings = maximum $ amplify2 program phaseSettings
+
+initAmplifier :: Program -> Value -> RunningProgram
+initAmplifier p phaseSetting = (0, p, [phaseSetting])
+
+feedInput :: RunningProgram -> Input -> RunningProgram
+feedInput (pos, prog, inputs) i = (pos, prog, inputs ++ [i])
+
+stepToOutput :: RunningProgram -> (RunningProgram, [Output])
+stepToOutput (pos, prog, inputs)
+  | programHasEnded pos prog = (running, [])
+  | null out = stepToOutput running
+  | otherwise = (running, out)
+  where (npos, nprog, nins, out) = step pos prog inputs
+        running = (npos, nprog, nins) 
+  
+power2 = map (amplify2max ampProgram1) (permutations [5..9])
+answer2 = maximum power2
+   
