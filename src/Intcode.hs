@@ -12,7 +12,7 @@ data OutputType = OutputNothing | OutputInProgram | OutputInPipe | JumpPosition 
 type JumpOutput = Bool
 type Input = Value
 type Output = Value
-type InputIsImmediate = Bool
+data ParameterType = PtImmediate | PtPosition | PtRelative deriving (Show)
 type Instruction = (NrInputs, PipeInput, OutputType, [Input] -> [Output])
 type RunningProgram = (Position, Program, [Input])
 
@@ -56,19 +56,24 @@ step pos program inputs
         outputs = if outputType == OutputInPipe then stepOutputs else []
         newPos = if (outputType == JumpPosition) && (not $ null stepOutputs) then head stepOutputs else pos + nrInputParameters + nrOutputParameters + 1
 
-parseOperation :: Int -> (Instruction, [InputIsImmediate])
+parseOperation :: Int -> (Instruction, [ParameterType])
 parseOperation i = (instruction, (take nrInputParameters (parseParameterModes (div i 100))))
-  where parseParameterModes 0 = repeat False
-        parseParameterModes x = ((mod x 10) == 1) : (parseParameterModes (div x 10))
+  where parseParameterModes 0 = repeat PtPosition
+        parseParameterModes x = (ptFromInt (mod x 10)) : (parseParameterModes (div x 10))
         (nrInputs, pipeInput, _, _) = instruction
         nrInputParameters = if pipeInput then 0 else nrInputs
         instruction = instructions Map.! opcode
         opcode = (mod i 100)
+        ptFromInt 0 = PtPosition
+        ptFromInt 1 = PtImmediate
+        ptFromInt 2 = PtRelative
 
-readInputParameters :: [InputIsImmediate] -> Position -> Program -> [Value]
+readInputParameters :: [ParameterType] -> Position -> Program -> [Value]
 readInputParameters [] _ _ = []
-readInputParameters (True : xs) pos prog = (prog !! pos) : (readInputParameters xs (pos + 1) prog)
-readInputParameters (False : xs) pos prog = (prog !! (prog !! pos)) : (readInputParameters xs (pos + 1) prog)
+readInputParameters (x : xs) pos prog = (read1 x) : (readInputParameters xs (pos + 1) prog)
+  where
+    read1 PtImmediate = (prog !! pos)
+    read1 PtPosition = (prog !! (prog !! pos))
 
 changeProgram :: Value -> Position -> Program -> Program
 changeProgram v 0 (_ : tail) = v : tail
