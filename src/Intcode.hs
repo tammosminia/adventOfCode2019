@@ -31,19 +31,19 @@ instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut),
     end = (0, False, OutputNothing, (\x -> x))
 
 fullRun :: Program -> [Value] -> (Program, [Output])
-fullRun p inputs = run 0 p inputs
+fullRun p inputs = run RunningProgram { position = 0, program = p, inputs = inputs }
 
-run :: Position -> Program -> [Value] -> (Program, [Output])
-run pos program inputs
-  | programHasEnded pos program = (program, [])
-  | otherwise = let (p, o) = run newPos newProg newInputs
+run :: RunningProgram -> (Program, [Output])
+run running
+  | programHasEnded running = (program running, [])
+  | otherwise = let (p, o) = run newRunning
                 in (p, stepOutputs ++ o)
-  where (newPos, newProg, newInputs, stepOutputs) = step pos program inputs
+  where (newRunning, stepOutputs) = step running
 
-step :: Position -> Program -> [Input] -> (Position, Program, [Input], [Output])
-step pos program inputs
-  | programHasEnded pos program = (0, program, inputs, [])
-  | otherwise = (newPos, newProgram, newInputs, outputs)
+step :: RunningProgram -> (RunningProgram, [Output])
+step (running@RunningProgram { position = pos, program = program, inputs = inputs })
+  | programHasEnded running = (running, [])
+  | otherwise = (RunningProgram { position = newPos, program = newProgram, inputs = newInputs }, outputs)
   where (instruction, inputsImmediate) = parseOperation $ program !! pos
         (nrInputs, pipeInput, outputType, fun) = instruction
         nrInputParameters = length inputsImmediate
@@ -79,18 +79,17 @@ changeProgram :: Value -> Position -> Program -> Program
 changeProgram v 0 (_ : tail) = v : tail
 changeProgram v p (h : tail) = h : (changeProgram v (p - 1) tail)
 
-programHasEnded :: Position -> Program -> Bool
-programHasEnded pos program
-  | program !! pos == 99 = True
+programHasEnded :: RunningProgram -> Bool
+programHasEnded r
+  | (program r) !! (position r) == 99 = True
   | otherwise = False
 
 feedInput :: RunningProgram -> Input -> RunningProgram
 feedInput (RunningProgram { position = pos, program = prog, inputs = inputs }) i = RunningProgram { position = pos, program = prog, inputs = inputs ++ [i] }
 
 stepToOutput :: RunningProgram -> (RunningProgram, [Output])
-stepToOutput (RunningProgram { position = pos, program = prog, inputs = inputs })
-  | programHasEnded pos prog = (running, [])
-  | null out = stepToOutput running
-  | otherwise = (running, out)
-  where (npos, nprog, nins, out) = step pos prog inputs
-        running = RunningProgram { position = npos, program = nprog, inputs = nins }
+stepToOutput running
+  | programHasEnded running = (nrunning, [])
+  | null out = stepToOutput nrunning
+  | otherwise = (nrunning, out)
+  where (nrunning, out) = step running
