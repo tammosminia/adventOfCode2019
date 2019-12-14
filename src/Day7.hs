@@ -19,7 +19,7 @@ amplify2 :: Program -> [Value] -> [Output]
 amplify2 program phaseSettings = amp initAmps 0
   where
     initAmps :: [RunningProgram]
-    initAmps = map (initAmplifier program) phaseSettings 
+    initAmps = map (initAmplifier program) phaseSettings
     amp :: [RunningProgram] -> Value -> [Output]
     amp amps v
       | null out = []
@@ -30,14 +30,13 @@ amplify2 program phaseSettings = amp initAmps 0
     oneLoopF (amps, []) amp = (amps, [])
     oneLoopF (amps, [v]) amp = (amps ++ [namp], out)
       where (namp, out) = stepToOutput $ feedInput amp v
-    
+
 amplify2max :: Program -> [Value] -> Output
 amplify2max program phaseSettings = maximum $ amplify2 program phaseSettings
 
 initAmplifier :: Program -> Value -> RunningProgram
-initAmplifier p phaseSetting = (0, p, [phaseSetting])
+initAmplifier p phaseSetting = RunningProgram { position = 0, program = p, inputs = [phaseSetting] }
 
-  
+
 power2 = map (amplify2max ampProgram1) (permutations [5..9])
 answer2 = maximum power2
-   

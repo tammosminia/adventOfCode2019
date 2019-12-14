@@ -14,7 +14,7 @@ type Input = Value
 type Output = Value
 data ParameterType = PtImmediate | PtPosition | PtRelative deriving (Show)
 type Instruction = (NrInputs, PipeInput, OutputType, [Input] -> [Output])
-type RunningProgram = (Position, Program, [Input])
+data RunningProgram = RunningProgram { position :: Position, program :: Program, inputs :: [Input] } deriving (Show)
 
 
 instructions :: Map.Map Opcode Instruction
@@ -85,12 +85,12 @@ programHasEnded pos program
   | otherwise = False
 
 feedInput :: RunningProgram -> Input -> RunningProgram
-feedInput (pos, prog, inputs) i = (pos, prog, inputs ++ [i])
+feedInput (RunningProgram { position = pos, program = prog, inputs = inputs }) i = RunningProgram { position = pos, program = prog, inputs = inputs ++ [i] }
 
 stepToOutput :: RunningProgram -> (RunningProgram, [Output])
-stepToOutput (pos, prog, inputs)
+stepToOutput (RunningProgram { position = pos, program = prog, inputs = inputs })
   | programHasEnded pos prog = (running, [])
   | null out = stepToOutput running
   | otherwise = (running, out)
   where (npos, nprog, nins, out) = step pos prog inputs
-        running = (npos, nprog, nins) 
+        running = RunningProgram { position = npos, program = nprog, inputs = nins }
