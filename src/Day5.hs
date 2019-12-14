@@ -11,7 +11,7 @@ type Value = Int
 type Opcode = Int
 type NrInputs = Int
 type PipeInput = Bool
-type OutputType = Int -- 0 = Nothing(nr=0), 1 = write in program(nr=1), 2 = output in pipe(nr=1), 3 = jump position (nr=0/1)
+data OutputType = OutputNothing | OutputInProgram | OutputInPipe | JumpPosition deriving (Show, Eq) -- Nothing(nr=0), write in program(nr=1), output in pipe(nr=1), jump position (nr=0/1)
 type JumpOutput = Bool
 type Input = Value
 type Output = Value
@@ -22,15 +22,15 @@ type Instruction = (NrInputs, PipeInput, OutputType, [Input] -> [Output])
 instructions :: Map.Map Opcode Instruction
 instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut), (5, ifTrue), (6, ifFalse), (7, lessThan), (8, equals), (99, end)]
   where
-    plus = (2, False, 1, (\[a,b] -> [a + b]))
-    product = (2, False, 1, (\[a,b] -> [a * b]))
-    pipeIn = (1, True, 1, (\x -> x))
-    pipeOut = (1, False, 2, (\x -> x))
-    ifTrue = (2, False, 3, (\[x, p] -> if (x /= 0) then [p] else []))
-    ifFalse = (2, False, 3, (\[x, p] -> if (x == 0) then [p] else []))
-    lessThan = (2, False, 1, (\[a, b] -> if (a < b) then [1] else [0]))
-    equals = (2, False, 1, (\[a, b] -> if (a == b) then [1] else [0]))
-    end = (0, False, 0, (\x -> x))
+    plus = (2, False, OutputInProgram, (\[a,b] -> [a + b]))
+    product = (2, False, OutputInProgram, (\[a,b] -> [a * b]))
+    pipeIn = (1, True, OutputInProgram, (\x -> x))
+    pipeOut = (1, False, OutputInPipe, (\x -> x))
+    ifTrue = (2, False, JumpPosition, (\[x, p] -> if (x /= 0) then [p] else []))
+    ifFalse = (2, False, JumpPosition, (\[x, p] -> if (x == 0) then [p] else []))
+    lessThan = (2, False, OutputInProgram, (\[a, b] -> if (a < b) then [1] else [0]))
+    equals = (2, False, OutputInProgram, (\[a, b] -> if (a == b) then [1] else [0]))
+    end = (0, False, OutputNothing, (\x -> x))
 
 fullRun :: Program -> [Value] -> (Program, [Output])
 fullRun p inputs = run 0 p inputs
@@ -49,14 +49,14 @@ step pos program inputs
   where (instruction, inputsImmediate) = parseOperation $ program !! pos
         (nrInputs, pipeInput, outputType, fun) = instruction
         nrInputParameters = length inputsImmediate
-        nrOutputParameters = if outputType == 1 then 1 else 0
+        nrOutputParameters = if outputType == OutputInProgram then 1 else 0
         newInputs = if pipeInput then drop nrInputs inputs else inputs
         stepInputs = if pipeInput then take nrInputs inputs else readInputParameters inputsImmediate (pos + 1) program
         stepOutputs = fun stepInputs
-        newProgram = if outputType == 1 then changeProgram (head stepOutputs) outputPos program else program
+        newProgram = if outputType == OutputInProgram then changeProgram (head stepOutputs) outputPos program else program
         outputPos = program !! (pos + nrInputParameters + 1)
-        outputs = if outputType == 2 then stepOutputs else []
-        newPos = if (outputType == 3) && (not $ null stepOutputs) then head stepOutputs else pos + nrInputParameters + nrOutputParameters + 1
+        outputs = if outputType == OutputInPipe then stepOutputs else []
+        newPos = if (outputType == JumpPosition) && (not $ null stepOutputs) then head stepOutputs else pos + nrInputParameters + nrOutputParameters + 1
 
 parseOperation :: Int -> (Instruction, [InputIsImmediate])
 parseOperation i = (instruction, (take nrInputParameters (parseParameterModes (div i 100))))
