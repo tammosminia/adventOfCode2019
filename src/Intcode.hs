@@ -7,85 +7,93 @@ type Position = Int
 type Value = Int
 type Opcode = Int
 type NrInputs = Int
+type NrParameters = Int
 type PipeInput = Bool
-data OutputType = OutputNothing | OutputInProgram | OutputInPipe | JumpPosition deriving (Show, Eq) -- Nothing(nr=0), write in program(nr=1), output in pipe(nr=1), jump position (nr=0/1)
+data OutputType = OutputNothing | OutputInProgram | OutputInPipe | JumpPosition | ChangeRelativeBase deriving (Show, Eq)
 type JumpOutput = Bool
 type Input = Value
 type Output = Value
 data ParameterType = PtImmediate | PtPosition | PtRelative deriving (Show)
-type Instruction = (NrInputs, PipeInput, OutputType, [Input] -> [Output])
-data RunningProgram = RunningProgram { position :: Position, program :: Program, inputs :: [Input] } deriving (Show)
+type Instruction = (NrParameters, NrInputs, PipeInput, OutputType, [Input] -> [Output])
+data RunningProgram = RunningProgram { position :: Position, program :: Program, inputs :: [Input], relativeBase :: Position} deriving (Show, Eq)
 
 
 instructions :: Map.Map Opcode Instruction
-instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut), (5, ifTrue), (6, ifFalse), (7, lessThan), (8, equals), (99, end)]
+instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut), (5, ifTrue), (6, ifFalse), (7, lessThan), (8, equals), (9, changeRelativeBase), (99, end)]
   where
-    plus = (2, False, OutputInProgram, (\[a,b] -> [a + b]))
-    product = (2, False, OutputInProgram, (\[a,b] -> [a * b]))
-    pipeIn = (1, True, OutputInProgram, (\x -> x))
-    pipeOut = (1, False, OutputInPipe, (\x -> x))
-    ifTrue = (2, False, JumpPosition, (\[x, p] -> if (x /= 0) then [p] else []))
-    ifFalse = (2, False, JumpPosition, (\[x, p] -> if (x == 0) then [p] else []))
-    lessThan = (2, False, OutputInProgram, (\[a, b] -> if (a < b) then [1] else [0]))
-    equals = (2, False, OutputInProgram, (\[a, b] -> if (a == b) then [1] else [0]))
-    end = (0, False, OutputNothing, (\x -> x))
+    plus = (3, 2, False, OutputInProgram, (\[a,b] -> [a + b]))
+    product = (3, 2, False, OutputInProgram, (\[a,b] -> [a * b]))
+    pipeIn = (1, 1, True, OutputInProgram, id)
+    pipeOut = (1, 1, False, OutputInPipe, id)
+    ifTrue = (2, 2, False, JumpPosition, (\[x, p] -> if (x /= 0) then [p] else []))
+    ifFalse = (2, 2, False, JumpPosition, (\[x, p] -> if (x == 0) then [p] else []))
+    lessThan = (3, 2, False, OutputInProgram, (\[a, b] -> if (a < b) then [1] else [0]))
+    equals = (3, 2, False, OutputInProgram, (\[a, b] -> if (a == b) then [1] else [0]))
+    changeRelativeBase = (1, 1, False, ChangeRelativeBase, id)
+    end = (0, 0, False, OutputNothing, id)
 
-fullRun :: Program -> [Value] -> (Program, [Output])
-fullRun p inputs = run RunningProgram { position = 0, program = p, inputs = inputs }
+fullRun :: Program -> [Input] -> [Output]
+fullRun p inputs = run RunningProgram { position = 0, program = p, inputs = inputs, relativeBase = 0 }
 
-run :: RunningProgram -> (Program, [Output])
+run :: RunningProgram -> [Output]
 run running
-  | programHasEnded running = (program running, [])
-  | otherwise = let (p, o) = run newRunning
-                in (p, stepOutputs ++ o)
+  | programHasEnded running = []
+  | otherwise = stepOutputs ++ (run newRunning)
   where (newRunning, stepOutputs) = step running
 
 step :: RunningProgram -> (RunningProgram, [Output])
-step (running@RunningProgram { position = pos, program = program, inputs = inputs })
+step (running@RunningProgram { position = pos, program = program, inputs = inputs, relativeBase = relativeBase })
   | programHasEnded running = (running, [])
-  | otherwise = (RunningProgram { position = newPos, program = newProgram, inputs = newInputs }, outputs)
-  where (instruction, inputsImmediate) = parseOperation $ program !! pos
-        (nrInputs, pipeInput, outputType, fun) = instruction
-        nrInputParameters = length inputsImmediate
-        nrOutputParameters = if outputType == OutputInProgram then 1 else 0
+  | otherwise = (RunningProgram { position = newPos, program = newProgram, inputs = newInputs, relativeBase = newRelativeBase }, outputs)
+  where (instruction, parType) = parseOperation $ readPosition pos program
+        (nrParameters, nrInputs, pipeInput, outputType, fun) = instruction
+        parameterPositions = readParameterPositions parType (pos + 1) program relativeBase
         newInputs = if pipeInput then drop nrInputs inputs else inputs
-        stepInputs = if pipeInput then take nrInputs inputs else readInputParameters inputsImmediate (pos + 1) program
+        stepInputs = take nrInputs (if pipeInput then inputs else map (\p -> readPosition p program) parameterPositions)
         stepOutputs = fun stepInputs
-        newProgram = if outputType == OutputInProgram then changeProgram (head stepOutputs) outputPos program else program
-        outputPos = program !! (pos + nrInputParameters + 1)
+        newProgram = if outputType == OutputInProgram then changePosition (head stepOutputs) (last parameterPositions) program else program
         outputs = if outputType == OutputInPipe then stepOutputs else []
-        newPos = if (outputType == JumpPosition) && (not $ null stepOutputs) then head stepOutputs else pos + nrInputParameters + nrOutputParameters + 1
+        newPos = if (outputType == JumpPosition) && (not $ null stepOutputs) then head stepOutputs else pos + nrParameters + 1
+        newRelativeBase = if outputType == ChangeRelativeBase then relativeBase + (head stepOutputs) else relativeBase
 
 parseOperation :: Int -> (Instruction, [ParameterType])
-parseOperation i = (instruction, (take nrInputParameters (parseParameterModes (div i 100))))
+parseOperation i = (instruction, (take nrParameters (parseParameterModes (div i 100))))
   where parseParameterModes 0 = repeat PtPosition
         parseParameterModes x = (ptFromInt (mod x 10)) : (parseParameterModes (div x 10))
-        (nrInputs, pipeInput, _, _) = instruction
-        nrInputParameters = if pipeInput then 0 else nrInputs
+        (nrParameters, nrInputs, pipeInput, _, _) = instruction
         instruction = instructions Map.! opcode
         opcode = (mod i 100)
         ptFromInt 0 = PtPosition
         ptFromInt 1 = PtImmediate
         ptFromInt 2 = PtRelative
 
-readInputParameters :: [ParameterType] -> Position -> Program -> [Value]
-readInputParameters [] _ _ = []
-readInputParameters (x : xs) pos prog = (read1 x) : (readInputParameters xs (pos + 1) prog)
+readParameterPositions :: [ParameterType] -> Position -> Program -> Position -> [Position]
+readParameterPositions [] _ _ _ = []
+readParameterPositions (x : xs) pos prog relativeBase = (read1 x) : (readParameterPositions xs (pos + 1) prog relativeBase)
   where
-    read1 PtImmediate = (prog !! pos)
-    read1 PtPosition = (prog !! (prog !! pos))
+    par = readPosition pos prog
+    read1 PtImmediate = pos
+    read1 PtPosition = par
+    read1 PtRelative = relativeBase + par
 
-changeProgram :: Value -> Position -> Program -> Program
-changeProgram v 0 (_ : tail) = v : tail
-changeProgram v p (h : tail) = h : (changeProgram v (p - 1) tail)
+changePosition :: Value -> Position -> Program -> Program
+changePosition v 0 (_ : tail) = v : tail
+changePosition v p (h : tail) = h : (changePosition v (p - 1) tail)
+changePosition v p [] = changePosition v p [0] 
+
+readPosition :: Position -> Program -> Value
+readPosition 0 (x : _) = x
+readPosition p (h : t) = readPosition (p - 1) t
+readPosition _ [] = 0
 
 programHasEnded :: RunningProgram -> Bool
 programHasEnded r
-  | (program r) !! (position r) == 99 = True
+  | readPosition (position r) (program r) == 99 = True
   | otherwise = False
 
 feedInput :: RunningProgram -> Input -> RunningProgram
-feedInput (RunningProgram { position = pos, program = prog, inputs = inputs }) i = RunningProgram { position = pos, program = prog, inputs = inputs ++ [i] }
+feedInput (RunningProgram { position = pos, program = prog, inputs = inputs, relativeBase = base }) i = 
+  RunningProgram { position = pos, program = prog, inputs = inputs ++ [i], relativeBase = base }
 
 stepToOutput :: RunningProgram -> (RunningProgram, [Output])
 stepToOutput running

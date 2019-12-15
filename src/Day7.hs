@@ -10,7 +10,7 @@ amplify program phaseSettings = amp phaseSettings 0
   where
     amp [] v = v
     amp (a : as) v = amp as (runAmp a v)
-    runAmp a v = head $ snd $ fullRun program [a, v] 
+    runAmp a v = head $ fullRun program [a, v] 
     
 power1 = map (amplify ampProgram1) (permutations [0..4])
 answer1 = maximum power1
@@ -35,7 +35,7 @@ amplify2max :: Program -> [Value] -> Output
 amplify2max program phaseSettings = maximum $ amplify2 program phaseSettings
 
 initAmplifier :: Program -> Value -> RunningProgram
-initAmplifier p phaseSetting = RunningProgram { position = 0, program = p, inputs = [phaseSetting] }
+initAmplifier p phaseSetting = RunningProgram { position = 0, program = p, inputs = [phaseSetting], relativeBase = 0 }
 
 
 power2 = map (amplify2max ampProgram1) (permutations [5..9])
