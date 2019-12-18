@@ -20,7 +20,9 @@ main = hspec $ do
       blocks (0,0) (0,0) (2,2) `shouldBe` False
       blocks (0,0) (2,2) (0,0) `shouldBe` False
       blocks (0,0) (0,1) (0,2) `shouldBe` True
-      
+      blocks (4,0) (4,2) (4,4) `shouldBe` True
+      blocks (4,0) (4,3) (4,4) `shouldBe` True
+
     it "example1" $ do
       bestAsteroid example1 `shouldBe` (8,(3,4))
   

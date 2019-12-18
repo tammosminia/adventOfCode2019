@@ -35,10 +35,10 @@ blocks from middle to = blocks0 (subtractPos middle from) (subtractPos to from)
       | otherwise = (div x2 x1) == (div y2 y1)
 
 visibles :: Position -> [Position] -> [Position]
-visibles from all = filter (visible all from) all
+visibles from all = filter (visible all from) $ all \\ [from]
 
 visible :: [Position] -> Position -> Position -> Bool
-visible all from to = any (\x -> blocks from x to) (all \\ [from, to])
+visible all from to = not $ any (\x -> blocks from x to) (all \\ [from, to])
 
 bestAsteroid :: [String] -> (Int, Position)
 bestAsteroid i = last $ sort $ map (\(s, vs) -> (length vs, s)) $ allVisible i
