@@ -26,7 +26,22 @@ main = hspec $ do
     it "example1" $ do
       bestAsteroid example1 `shouldBe` (8,(3,4))
   
---    it "example2" $ do
---      bestAsteroid ["......#.#.","#..#.#....","..#######.",".#.#.###..",".#..#.....","..#....#.#","#..#....#.",".##.#..###","##...#..#.",".#....####"] `shouldBe` (33,(5,8))
-  
-      
+    it "example2" $ do
+      bestAsteroid example2 `shouldBe` (33,(5,8))
+
+    it "example3" $ do
+      bestAsteroid example3 `shouldBe` (35,(1,2))
+
+    it "example4" $ do
+      bestAsteroid example4 `shouldBe` (41,(6,3))
+
+--    it "example5" $ do
+--      bestAsteroid example5 `shouldBe` (210,(11,13))
+
+    it "sortClockwise" $ do
+      sortClockwise [(1,1),(2,1),(1,2),(1,3),(3,1),(10,9)] `shouldBe` [(3,1),(2,1),(10,9),(1,1),(1,2),(1,3)]
+      sortClockwise [(1,1),(-1,1),(1,-1),(-1,-1),(0,-1),(0,1),(-1,0),(1,0)] `shouldBe` [(0,-1),(1,-1),(1,0),(1,1),(0,1),(-1,1),(-1,0),(-1,-1)]
+
+    it "example 2-1" $ do
+      take 2 (vaporize (8,3) (parseInput example21)) `shouldBe` [(8,1),(9,0)]
+
