@@ -26,6 +26,20 @@ main = hspec $ do
     it "plus relative inputs and outputs" $ do
       step RunningProgram { position = 0, program = [22201,1,2,5,99,11,22], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 4, program = [22201,1,2,5,99,11,22,0,0,33], inputs = [], relativeBase = 4 }, [])
 
+    it "pipeIn positional" $ do
+      step (createRP [3,2] [9]) `shouldBe` (RunningProgram { position = 2, program = [3,2,9], inputs = [], relativeBase = 0 }, [])
+    it "pipeIn immediate" $ do
+      step (createRP [103,2] [9]) `shouldBe` (RunningProgram { position = 2, program = [103,9], inputs = [], relativeBase = 0 }, [])
+    it "pipeIn relative" $ do
+      step RunningProgram { position = 0, program = [203,2], inputs = [9], relativeBase = 1 } `shouldBe` (RunningProgram { position = 2, program = [203,2,0,9], inputs = [], relativeBase = 1 }, [])
+
+    it "pipeOut positional" $ do
+      step (createRP [4,2,99] []) `shouldBe` (RunningProgram { position = 2, program = [4,2,99], inputs = [], relativeBase = 0 }, [99])
+    it "pipeOut immediate" $ do
+      step (createRP [104,2,99] []) `shouldBe` (RunningProgram { position = 2, program = [104,2,99], inputs = [], relativeBase = 0 }, [2])
+    it "pipeOut relative" $ do
+      step RunningProgram { position = 0, program = [204,2,99,7], inputs = [], relativeBase = 1 } `shouldBe` (RunningProgram { position = 2, program = [204,2,99,7], inputs = [], relativeBase = 1 }, [7])
+
   describe "day5" $ do
     it "fullRun" $ do
       testProg [1002,4,3,4,33] [] []
