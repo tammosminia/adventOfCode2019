@@ -35,10 +35,33 @@ main = hspec $ do
 
     it "pipeOut positional" $ do
       step (createRP [4,2,99] []) `shouldBe` (RunningProgram { position = 2, program = [4,2,99], inputs = [], relativeBase = 0 }, [99])
+    it "pipeOut positional" $ do
+      step (createRP [4,0,99] []) `shouldBe` (RunningProgram { position = 2, program = [4,0,99], inputs = [], relativeBase = 0 }, [4])
     it "pipeOut immediate" $ do
       step (createRP [104,2,99] []) `shouldBe` (RunningProgram { position = 2, program = [104,2,99], inputs = [], relativeBase = 0 }, [2])
     it "pipeOut relative" $ do
       step RunningProgram { position = 0, program = [204,2,99,7], inputs = [], relativeBase = 1 } `shouldBe` (RunningProgram { position = 2, program = [204,2,99,7], inputs = [], relativeBase = 1 }, [7])
+
+    it "jumpTrue positional" $ do
+      step (createRP [5,1,3,99] []) `shouldBe` (RunningProgram { position = 99, program = [5,1,3,99], inputs = [], relativeBase = 0 }, [])
+      step (createRP [5,1,0,99] []) `shouldBe` (RunningProgram { position = 5, program = [5,1,0,99], inputs = [], relativeBase = 0 }, [])
+      step (createRP [5,2,0,99] []) `shouldBe` (RunningProgram { position = 3, program = [5,2,0,99], inputs = [], relativeBase = 0 }, [])
+    it "jumpTrue immediate" $ do
+      step (createRP [1105,1,5,99] []) `shouldBe` (RunningProgram { position = 5, program = [1105,1,5,99], inputs = [], relativeBase = 0 }, [])
+      step (createRP [1105,0,0,99] []) `shouldBe` (RunningProgram { position = 3, program = [1105,0,0,99], inputs = [], relativeBase = 0 }, [])
+    it "jumpTrue relative" $ do
+      step RunningProgram { position = 0, program = [2205,1,2,99,1,9], inputs = [], relativeBase = 3 } `shouldBe` (RunningProgram { position = 9, program = [2205,1,2,99,1,9], inputs = [], relativeBase = 3 }, [])
+      step RunningProgram { position = 0, program = [2205,1,2,99,0,9], inputs = [], relativeBase = 3 } `shouldBe` (RunningProgram { position = 3, program = [2205,1,2,99,0,9], inputs = [], relativeBase = 3 }, [])
+
+    it "lessThan positional" $ do
+      step (createRP [7,1,0,0,99] []) `shouldBe` (RunningProgram { position = 4, program = [1,1,0,0,99], inputs = [], relativeBase = 0 }, [])
+      step (createRP [7,1,1,0,99] []) `shouldBe` (RunningProgram { position = 4, program = [0,1,1,0,99], inputs = [], relativeBase = 0 }, [])
+    it "lessThan immediate" $ do
+      step (createRP [11107,2,3,5,99] []) `shouldBe` (RunningProgram { position = 4, program = [11107,2,3,1,99], inputs = [], relativeBase = 0 }, [])
+      step (createRP [11107,3,3,5,99] []) `shouldBe` (RunningProgram { position = 4, program = [11107,3,3,0,99], inputs = [], relativeBase = 0 }, [])
+    it "lessThan relative" $ do
+      step RunningProgram { position = 0, program = [22207,1,2,3,99,6,7,5], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 4, program = [22207,1,2,3,99,6,7,1], inputs = [], relativeBase = 4 }, [])
+      step RunningProgram { position = 0, program = [22207,1,2,3,99,6,6,5], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 4, program = [22207,1,2,3,99,6,6,0], inputs = [], relativeBase = 4 }, [])
 
   describe "day5" $ do
     it "fullRun" $ do

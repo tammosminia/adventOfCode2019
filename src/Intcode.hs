@@ -19,14 +19,14 @@ data RunningProgram = RunningProgram { position :: Position, program :: Program,
 
 
 instructions :: Map.Map Opcode Instruction
-instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut), (5, ifTrue), (6, ifFalse), (7, lessThan), (8, equals), (9, changeRelativeBase), (99, end)]
+instructions = Map.fromList [(1, plus), (2, product), (3, pipeIn), (4, pipeOut), (5, jumpTrue), (6, jumpFalse), (7, lessThan), (8, equals), (9, changeRelativeBase), (99, end)]
   where
     plus = (3, 2, False, OutputInProgram, (\[a,b] -> [a + b]))
     product = (3, 2, False, OutputInProgram, (\[a,b] -> [a * b]))
     pipeIn = (1, 1, True, OutputInProgram, id)
     pipeOut = (1, 1, False, OutputInPipe, id)
-    ifTrue = (2, 2, False, JumpPosition, (\[x, p] -> if (x /= 0) then [p] else []))
-    ifFalse = (2, 2, False, JumpPosition, (\[x, p] -> if (x == 0) then [p] else []))
+    jumpTrue = (2, 2, False, JumpPosition, (\[x, p] -> if (x /= 0) then [p] else []))
+    jumpFalse = (2, 2, False, JumpPosition, (\[x, p] -> if (x == 0) then [p] else []))
     lessThan = (3, 2, False, OutputInProgram, (\[a, b] -> if (a < b) then [1] else [0]))
     equals = (3, 2, False, OutputInProgram, (\[a, b] -> if (a == b) then [1] else [0]))
     changeRelativeBase = (1, 1, False, ChangeRelativeBase, id)
@@ -53,7 +53,7 @@ step (running@RunningProgram { position = pos, program = program, inputs = input
         stepOutputs = fun stepInputs
         newProgram = if outputType == OutputInProgram then changePosition (head stepOutputs) (last parameterPositions) program else program
         outputs = if outputType == OutputInPipe then stepOutputs else []
-        newPos = if (outputType == JumpPosition) && (not $ null stepOutputs) then head stepOutputs else pos + nrParameters + 1
+        newPos = if ((outputType == JumpPosition) && (not $ null stepOutputs)) then (head stepOutputs) else (pos + nrParameters + 1)
         newRelativeBase = if outputType == ChangeRelativeBase then relativeBase + (head stepOutputs) else relativeBase
 
 parseOperation :: Int -> (Instruction, [ParameterType])
