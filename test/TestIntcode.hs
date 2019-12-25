@@ -63,6 +63,16 @@ main = hspec $ do
       step RunningProgram { position = 0, program = [22207,1,2,3,99,6,7,5], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 4, program = [22207,1,2,3,99,6,7,1], inputs = [], relativeBase = 4 }, [])
       step RunningProgram { position = 0, program = [22207,1,2,3,99,6,6,5], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 4, program = [22207,1,2,3,99,6,6,0], inputs = [], relativeBase = 4 }, [])
 
+    it "changeRelativeBase positional" $ do
+      step RunningProgram { position = 0, program = [9,0,99], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 2, program = [9,0,99], inputs = [], relativeBase = 13 }, [])
+      step RunningProgram { position = 0, program = [9,3,99,-9], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 2, program = [9,3,99,-9], inputs = [], relativeBase = -5 }, [])
+    it "changeRelativeBase immediate" $ do
+      step RunningProgram { position = 0, program = [109,7,99], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 2, program = [109,7,99], inputs = [], relativeBase = 11 }, [])
+      step RunningProgram { position = 0, program = [109,-7,99], inputs = [], relativeBase = 4 } `shouldBe` (RunningProgram { position = 2, program = [109,-7,99], inputs = [], relativeBase = -3 }, [])
+    it "changeRelativeBase relative" $ do
+      step RunningProgram { position = 0, program = [209,1,99,5], inputs = [], relativeBase = 2 } `shouldBe` (RunningProgram { position = 2, program = [209,1,99,5], inputs = [], relativeBase = 7 }, [])
+
+
   describe "day5" $ do
     it "fullRun" $ do
       testProg [1002,4,3,4,33] [] []
