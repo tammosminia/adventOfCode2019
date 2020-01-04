@@ -95,6 +95,10 @@ feedInput :: RunningProgram -> Input -> RunningProgram
 feedInput (RunningProgram { position = pos, program = prog, inputs = inputs, relativeBase = base }) i = 
   RunningProgram { position = pos, program = prog, inputs = inputs ++ [i], relativeBase = base }
 
+feedInputs :: RunningProgram -> [Input] -> RunningProgram
+feedInputs (RunningProgram { position = pos, program = prog, inputs = inputs, relativeBase = base }) i =
+  RunningProgram { position = pos, program = prog, inputs = inputs ++ i, relativeBase = base }
+
 stepToOutput :: RunningProgram -> (RunningProgram, [Output])
 stepToOutput running
   | programHasEnded running = (nrunning, [])
