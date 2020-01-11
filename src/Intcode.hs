@@ -61,7 +61,9 @@ parseOperation i = (instruction, (take nrParameters (parseParameterModes (div i 
   where parseParameterModes 0 = repeat PtPosition
         parseParameterModes x = (ptFromInt (mod x 10)) : (parseParameterModes (div x 10))
         (nrParameters, nrInputs, pipeInput, _, _) = instruction
-        instruction = instructions Map.! opcode
+        instruction = case (instructions Map.!? opcode) of
+          Just i -> i
+          Nothing -> error "unknown opcode"
         opcode = (mod i 100)
         ptFromInt 0 = PtPosition
         ptFromInt 1 = PtImmediate
