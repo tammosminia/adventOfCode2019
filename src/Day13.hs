@@ -2,6 +2,7 @@ module Day13 where
 
 import Intcode
 import qualified Data.Map as Map
+import Debug.Trace
 
 type TileId = Int
 type Pos = (Int, Int)
@@ -23,7 +24,10 @@ showTile 3 = '=' -- paddle
 showTile 4 = 'o' -- ball
 
 drawScreen :: Screen -> IO ()
-drawScreen s = putStrLn $ unlines rows
+drawScreen s = putStrLn $ showScreen s
+
+showScreen :: Screen -> String
+showScreen s = unlines rows
   where
     ps = Map.keys s
     maxX = maximum $ map fst ps
@@ -57,11 +61,27 @@ decideMove s
 noMoreBlocks :: Screen -> Bool
 noMoreBlocks s = (Map.size $ Map.filter (== 2) s) == 0
 
-play :: (RunningProgram, Screen, Int) -> IO ()
+play :: (RunningProgram, Screen, Int) -> IO (RunningProgram, Screen, Int)
 play (program, screen, score)
---  | noMoreBlocks screen = putStrLn "noMoreBlocks" --drawScreen screen
-  | programHasEnded program = putStrLn "programHasEnded" --drawScreen screen
-  | otherwise = play $ stepGame (feedInputs program $ decideMove screen, screen, score)
+  | noMoreBlocks screen = do
+      drawScreen screen
+      putStrLn "noMoreBlocks"
+      putStrLn $ "program: " ++ show score
+      let newProg = replaceInputs program $ decideMove screen
+      let game = stepGame (newProg, screen, score)
+      let (_, _, lastScore) = game
+      putStrLn $ "last score: " ++ show lastScore
+      return game
+  | programHasEnded program = do
+      drawScreen screen
+      putStrLn "programHasEnded"
+      return (program, screen, score)
+  | otherwise = do
+--      drawScreen screen
+      putStrLn $ "score: " ++ show score
+      let newProg = replaceInputs program $ decideMove screen
+      let game = stepGame (newProg, screen, score)
+      play game
 
 stepGame :: (RunningProgram, Screen, Int) -> (RunningProgram, Screen, Int)
 stepGame (rp, screen, score) = (p3, newScreen, newScore)
@@ -80,5 +100,5 @@ initialize p = initR (createRP p [0], Map.empty, 0)
       | (inputs rp) == [] = (rp, screen, score)
       | otherwise = initR $ stepGame (rp, screen, score)
 
-init2 = initialize input1
+init2 = initialize input2
 answer2 = play init2
