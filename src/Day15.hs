@@ -7,17 +7,31 @@ input1 = [3,1033,1008,1033,1,1032,1005,1032,31,1008,1033,2,1032,1005,1032,58,100
 
 type Movement = Int -- 1=N, 2=S, 3=W, 4=E
 type Reply = Int -- 0=wall, 1=moved to empty space, 2=moved to oxygen
+type Location = (Int, Int)
+type Area = Map.Map Location Reply
 
 --returns the minimal number of steps to oxygen
-findOxygen :: [[Movement]] -> Int
-findOxygen [] = error "no oxygen found"
-findOxygen (ms : rest)
-  | reply == 0 = findOxygen rest
-  | reply == 1 = findOxygen $ rest ++ map (\x -> ms ++ [x]) [1..4]
+findOxygen :: [[Movement]] -> Area -> Int
+findOxygen [] _ = error "no oxygen found"
+findOxygen (ms : rest) area
+  | Map.member loc area = findOxygen rest area
+  | reply == 0 = findOxygen rest area'
+  | reply == 1 = findOxygen (rest ++ map (\x -> ms ++ [x]) [1..4]) area'
   | reply == 2 = length ms
   where
+    loc = movementsToLocation ms
     startRp = createRP input1 []
     (rp, reply) = runMovements ms startRp
+    area' = Map.insert loc reply area
+
+movementsToLocation :: [Movement] -> Location
+movementsToLocation [] = (0, 0)
+movementsToLocation (m : rest) = case m of
+  1 -> (x, y-1)
+  2 -> (x, y+1)
+  3 -> (x-1, y)
+  4 -> (x+1, y)
+  where (x, y) = movementsToLocation rest
 
 --returns the last output
 runMovements :: [Movement] -> RunningProgram -> (RunningProgram, Reply)
@@ -27,4 +41,4 @@ runMovements [m] rp = (rp', o)
 runMovements (m : rest) rp = runMovements rest rp'
   where (rp', _) = stepToOutput $ feedInput rp m
 
-answer1 = findOxygen [[]]
+answer1 = findOxygen [[]] Map.empty
