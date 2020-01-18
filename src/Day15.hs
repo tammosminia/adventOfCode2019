@@ -24,7 +24,7 @@ findOxygen ((nms, rp, loc, move) : rest) area
     loc' = changeLoc move loc
     nms' = nms + 1
     (rp', [reply]) = stepToOutput $ feedInput rp move
-    area' = trace (show loc) $ Map.insert loc reply area
+    area' = trace (show loc') $ Map.insert loc' reply area
 
 changeLoc :: Movement -> Location -> Location
 changeLoc 1 (x,y) = (x, y-1)
