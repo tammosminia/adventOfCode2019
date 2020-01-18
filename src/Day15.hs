@@ -12,34 +12,44 @@ type Location = (Int, Int)
 type Area = Map.Map Location Reply
 
 --returns the minimal number of steps to oxygen
-findOxygen :: [[Movement]] -> Area -> Int
+findOxygenAddMovements l n rp loc a = findOxygen (l ++ map (\m -> (n, rp, loc, m)) [1..4]) a
+findOxygen :: [(Int, RunningProgram, Location, Movement)] -> Area -> Int
 findOxygen [] _ = error "no oxygen found"
-findOxygen (ms : rest) area
-  | Map.member loc area = findOxygen rest area
-  | reply == 0 = findOxygen rest area'
-  | reply == 1 = findOxygen (rest ++ map (\x -> ms ++ [x]) [1..4]) area'
-  | reply == 2 = length ms
+findOxygen ((nms, rp, loc, move) : rest) area
+  | Map.member loc' area = findOxygen rest area
+  | reply == 0 = trace (showArea area') $ findOxygen rest area'
+  | reply == 1 = findOxygenAddMovements rest nms' rp' loc' area'
+  | reply == 2 = nms'
   where
-    loc = movementsToLocation ms
-    startRp = createRP input1 []
-    (rp, reply) = runMovements ms startRp
+    loc' = changeLoc move loc
+    nms' = nms + 1
+    (rp', [reply]) = stepToOutput $ feedInput rp move
     area' = trace (show loc) $ Map.insert loc reply area
 
-movementsToLocation :: [Movement] -> Location
-movementsToLocation [] = (0, 0)
-movementsToLocation (m : rest) = case m of
-  1 -> (x, y-1)
-  2 -> (x, y+1)
-  3 -> (x-1, y)
-  4 -> (x+1, y)
-  where (x, y) = movementsToLocation rest
+changeLoc :: Movement -> Location -> Location
+changeLoc 1 (x,y) = (x, y-1)
+changeLoc 2 (x,y) = (x, y+1)
+changeLoc 3 (x,y) = (x-1, y)
+changeLoc 4 (x,y) = (x+1, y)
 
---returns the last output
-runMovements :: [Movement] -> RunningProgram -> (RunningProgram, Reply)
-runMovements [] rp = (rp, 1)
-runMovements [m] rp = (rp', o)
-  where (rp', [o]) = stepToOutput $ feedInput rp m
-runMovements (m : rest) rp = runMovements rest rp'
-  where (rp', _) = stepToOutput $ feedInput rp m
+showTile :: Reply -> Char
+showTile (-1) = ' '
+showTile 0 = '#'
+showTile 1 = '.'
+showTile 2 = 'O'
 
-answer1 = findOxygen [[]] Map.empty
+showArea :: Area -> String
+showArea s = unlines rows
+  where
+    ps = Map.keys s
+    xs = map fst ps
+    minX = minimum xs
+    maxX = maximum xs
+    ys = map snd ps
+    minY = minimum ys
+    maxY = maximum ys
+    at x y = Map.findWithDefault (-1) (x, y) s
+    row y = [ showTile (at x y) | x <- [minX..maxX] ]
+    rows = [ row y | y <- [minY..maxY] ]
+
+answer1 = findOxygenAddMovements [] 0 (createRP input1 []) (0,0) Map.empty
