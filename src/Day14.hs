@@ -2,7 +2,6 @@ module Day14 where
 
 import Data.List
 import Data.List.Split
-import Debug.Trace
 
 type Chemical = String
 type ChemicalAmount = (Int, String)
